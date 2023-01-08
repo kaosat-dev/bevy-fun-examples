@@ -19,6 +19,7 @@ This example is based both on some of my older work with vertex shader animation
 - shadows do not work correctly as Bevy (as of 0.9.1) does not yet support correct shadows of meshes deformed with vertex shaders out the box
 - there is no shading in this demo, just vertex colors (Perhaps Bevy has a way of using the Standard Material Pixel shader with a custom vertex shader but I have not 
 found a way to do this yet)
+- masking of animation is currently not implemented
 
 ## Credits
 
