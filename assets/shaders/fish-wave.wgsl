@@ -103,7 +103,7 @@ let body_gradient = ((vertex.position.y - abs(min_bounds.y)) / len ) * exp(speed
 
 let mask_black = 0.2;
 let mask_white = 1.0;
-let mask = smoothstep(mask_black, mask_white, 1.0 - body_gradient); //body_gradient * 0.1;//
+let mask = body_gradient * 0.1;//smoothstep(mask_black, mask_white, 1.0 - body_gradient); //
 
 // side to side
 //let side_to_side_intensity = 0.3;
