@@ -14,6 +14,8 @@ Tested with Bevy 0.9.1
 ### [Vertex Animation](./examples/vertex_animation/README.md)
 - vertex shader animation (specifically for animation fishes etc) 
 
+    run it with ```cargo run --example vertex_animation```
+
 
 ## Notes
 
