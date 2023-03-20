@@ -9,8 +9,7 @@ use bevy::{
         render_resource::{
             AsBindGroup, ShaderRef,
         },
-    },
-    gltf::{Gltf, GltfMesh}
+    }
 };
 
 
@@ -96,7 +95,7 @@ pub fn replace_standard_material(
     mut commands: Commands,
     ){
 
-        for (entity, gltf, _, old_material) in gltf_entities.iter() {
+        for (entity, _, _, old_material) in gltf_entities.iter() {
             let original_material = standard_materials.get(old_material).unwrap();
             let custom_material =
             custom_materials.add(CustomMaterial {
@@ -136,24 +135,12 @@ pub fn setup (
         brightness: 0.2,
     });
 
-    const HALF_SIZE: f32 = 10.0;
     commands.spawn(DirectionalLightBundle {
         directional_light: DirectionalLight {
-            // Configure the projection to better fit the scene
-            shadow_projection: OrthographicProjection {
-                left: -HALF_SIZE,
-                right: HALF_SIZE,
-                bottom: -HALF_SIZE,
-                top: HALF_SIZE,
-                near: -10.0 * HALF_SIZE,
-                far: 10.0 * HALF_SIZE,
-                ..default()
-            },
-            shadows_enabled: true, // FIXME: has a limited range,
+            shadows_enabled: true,
             ..default()
         },
         transform: Transform::from_xyz(0.0, 15.0, 0.0).with_rotation(
-            //Quat::from_rotation_z(0.125 * std::f32::consts::PI)
             Quat::from_euler(EulerRot::XYZ,
                 (10.0_f32).to_radians(),
                 (10.0_f32).to_radians(),
@@ -162,7 +149,6 @@ pub fn setup (
         ),
         ..default()
     });
-
 
     commands.spawn(
         TextBundle::from_section(
@@ -269,6 +255,7 @@ pub struct VertexAnimationPlugin;
 impl Plugin for VertexAnimationPlugin {
   fn build(&self, app: &mut App) {
       app
+      .insert_resource(ClearColor(Color::rgb(0.1, 0.6, 0.6)))
       .add_plugin(MaterialPlugin::<CustomMaterial>::default())
       .add_startup_system(setup)
       .add_system(replace_standard_material)
