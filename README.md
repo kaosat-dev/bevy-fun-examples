@@ -6,7 +6,7 @@
 
 A few different examples for bevy (not the official examples :)
 
-Tested with Bevy 0.9.1
+Tested with Bevy 0.10.0
 
 
 ## List of examples
@@ -31,4 +31,4 @@ Tested with Bevy 0.9.1
 
 ## License
 
-These example is licensed under MIT.
+These example are licensed under MIT.
