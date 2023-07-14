@@ -6,7 +6,7 @@
 
 A few different examples for bevy (not the official examples :)
 
-Tested with Bevy 0.10.0
+Tested with Bevy 0.11.x
 
 
 ## List of examples
