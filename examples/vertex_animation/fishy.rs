@@ -1,20 +1,22 @@
 
 
+use std::time::Duration;
+
 use bevy::{
     prelude::*, 
 
-    reflect::TypeUuid,
+    reflect::{TypeUuid, TypePath},
     render::{
         primitives::Aabb,
         render_resource::{
             AsBindGroup, ShaderRef,
         },
-    }
+    }, asset::ChangeWatcher
 };
 
 
 // This is the struct that will be passed to your shader
-#[derive(AsBindGroup, Clone, TypeUuid)]
+#[derive(AsBindGroup, Clone, TypeUuid, TypePath)]
 #[uuid = "4ee9c363-1124-4113-890e-199d81b00281"]
 pub struct CustomMaterial {
     #[uniform(2)]
@@ -161,11 +163,8 @@ pub fn setup (
         )
         .with_style(Style {
             position_type: PositionType::Absolute,
-            position: UiRect {
-                top: Val::Px(10.0),
-                left: Val::Px(10.0),
-                ..default()
-            },
+            top: Val::Px(10.0),
+            left: Val::Px(10.0),
             ..default()
         }),
     );
@@ -256,11 +255,15 @@ impl Plugin for VertexAnimationPlugin {
   fn build(&self, app: &mut App) {
       app
       .insert_resource(ClearColor(Color::rgb(0.1, 0.6, 0.6)))
-      .add_plugin(MaterialPlugin::<CustomMaterial>::default())
-      .add_startup_system(setup)
-      .add_system(replace_standard_material)
-      .add_system(update_uniforms)
-      .add_system(update_shader_uniforms)
+      .add_plugins((
+        MaterialPlugin::<CustomMaterial>::default(),
+      ))
+      .add_systems(Startup, setup)
+      .add_systems(Update, (
+        replace_standard_material,
+        update_uniforms,
+        update_shader_uniforms
+      ))
       ;
   }
 }
@@ -268,13 +271,17 @@ impl Plugin for VertexAnimationPlugin {
 
 fn main(){
     App::new()
-    .add_plugins(DefaultPlugins.set(AssetPlugin {
-        // This tells the AssetServer to watch for changes to assets.
-        // It enables our scenes to automatically reload in game when we modify their files.
-        // practical in our case to be able to edit the shaders without needing to recompile
-        watch_for_changes: true,
-        ..default()
-    }))
-    .add_plugin(VertexAnimationPlugin)
+    .add_plugins((
+        DefaultPlugins.set(
+            AssetPlugin {
+                // This tells the AssetServer to watch for changes to assets.
+                // It enables our scenes to automatically reload in game when we modify their files.
+                // practical in our case to be able to edit the shaders without needing to recompile
+                watch_for_changes: ChangeWatcher::with_delay(Duration::from_millis(50)),
+                ..default()
+            }
+        ),
+        VertexAnimationPlugin
+    ))
     .run();
 }

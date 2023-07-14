@@ -2,6 +2,15 @@
 #import bevy_pbr::mesh_bindings
 #import bevy_pbr::mesh_functions
 
+#import bevy_pbr::prepass_bindings
+#import bevy_pbr::mesh_vertex_output  MeshVertexOutput
+#import bevy_pbr::mesh_view_bindings globals
+#import bevy_pbr::mesh_bindings mesh
+#import bevy_pbr::mesh_functions mesh_position_local_to_world
+#import bevy_pbr::mesh_functions mesh_position_world_to_clip
+#import bevy_pbr::mesh_functions mesh_normal_local_to_world
+// #import bevy_pbr::pbr_functions::prepare_world_normal
+
 struct Vertex {
     @location(0) position: vec3<f32>,
     @location(1) normal: vec3<f32>,
@@ -22,7 +31,19 @@ struct Vertex {
 
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
-    #import bevy_pbr::mesh_vertex_output
+    // see https://github.com/bevyengine/bevy/blob/main/crates/bevy_pbr/src/render/mesh_vertex_output.wgsl
+    // #import bevy_pbr::mesh_vertex_output
+    @location(0) world_position: vec4<f32>,
+    @location(1) world_normal: vec3<f32>,
+    #ifdef VERTEX_UVS
+    @location(2) uv: vec2<f32>,
+    #endif
+    #ifdef VERTEX_TANGENTS
+    @location(3) world_tangent: vec4<f32>,
+    #endif
+    #ifdef VERTEX_COLORS
+    @location(4) color: vec4<f32>,
+    #endif
 };
 
 @group(1) @binding(3)
@@ -89,57 +110,59 @@ fn twist(position: vec4<f32>, intensity: f32, body_gradient:f32, mask: f32, offs
 @vertex
 fn vertex(vertex: Vertex) -> VertexOutput {
 
-let time = globals.time;
+    let time = globals.time;
 
-// randomize movement based on world coordinates 
-let world_pos = mesh_position_local_to_world(mesh.model, vec4<f32>(vertex.position.x, vertex.position.y, vertex.position.z, 1.0));
-let offset_seed = (world_pos.x * world_pos.y * world_pos.z) / 100. ;
+    // randomize movement based on world coordinates 
+    let world_pos = mesh_position_local_to_world(mesh.model, vec4<f32>(vertex.position.x, vertex.position.y, vertex.position.z, 1.0));
+    let offset_seed = (world_pos.x * world_pos.y * world_pos.z) / 100. ;
 
-// body gradient
-let len = max_bounds.y - min_bounds.y;
-// body gradient is a value between 0 & 1 representing where we the current position is along the model , based on its bounds
-// multiplied by exp(speed) to have more movement amplitude at higher speeds
-let body_gradient = ((vertex.position.y - abs(min_bounds.y)) / len ) * exp(speed * 0.1) ; 
+    // body gradient
+    let len = max_bounds.y - min_bounds.y;
+    // body gradient is a value between 0 & 1 representing where we the current position is along the model , based on its bounds
+    // multiplied by exp(speed) to have more movement amplitude at higher speeds
+    let body_gradient = ((vertex.position.y - abs(min_bounds.y)) / len ) * exp(speed * 0.1) ; 
 
-let mask_black = 0.2;
-let mask_white = 1.0;
-let mask = body_gradient * 0.1;//smoothstep(mask_black, mask_white, 1.0 - body_gradient); //
+    let mask_black = 0.2;
+    let mask_white = 1.0;
+    let mask = body_gradient * 0.1;//smoothstep(mask_black, mask_white, 1.0 - body_gradient); //
 
-// side to side
-//let side_to_side_intensity = 0.3;
-// pivot
-//let pivot_intensity = 0.2;
-// wave
-//let wave_intensity = 2.8;
-// twist
-//let twist_intensity = 0.7;
+    // side to side
+    //let side_to_side_intensity = 0.3;
+    // pivot
+    //let pivot_intensity = 0.2;
+    // wave
+    //let wave_intensity = 2.8;
+    // twist
+    //let twist_intensity = 0.7;
 
-// calculate output position
-var position = vec4<f32>(vertex.position.x, vertex.position.y, vertex.position.z, 1.0);
+    // calculate output position
+    var position = vec4<f32>(vertex.position.x, vertex.position.y, vertex.position.z, 1.0);
 
-position = side_to_side(position, side_to_side_intensity, mask, offset_seed);
-position = pivot(position, pivot_intensity, mask, offset_seed);
-position = wave(position, wave_intensity, body_gradient, mask, offset_seed);
-position = twist(position, twist_intensity, body_gradient, mask, offset_seed);
+    position = side_to_side(position, side_to_side_intensity, mask, offset_seed);
+    position = pivot(position, pivot_intensity, mask, offset_seed);
+    position = wave(position, wave_intensity, body_gradient, mask, offset_seed);
+    position = twist(position, twist_intensity, body_gradient, mask, offset_seed);
 
     var out: VertexOutput;
-#ifdef SKINNED
-    var model = skin_model(vertex.joint_indices, vertex.joint_weights);
-    out.world_normal = skin_normals(model, vertex.normal);
-#else
-    var model = mesh.model;
-    out.world_normal = mesh_normal_local_to_world(vertex.normal);
-#endif
-    out.world_position = mesh_position_local_to_world(model, position);
-#ifdef VERTEX_UVS
-    out.uv = vertex.uv;
-#endif
-#ifdef VERTEX_TANGENTS
-    out.world_tangent = mesh_tangent_local_to_world(model, vertex.tangent);
-#endif
-#ifdef VERTEX_COLORS
-    out.color = vertex.color;
-#endif
+    #ifdef SKINNED
+        var model = skin_model(vertex.joint_indices, vertex.joint_weights);
+        out.world_normal = skin_normals(model, vertex.normal);
+    #else
+        var model = mesh.model;
+        out.world_normal = mesh_normal_local_to_world(vertex.normal);
+    #endif
+    #ifdef VERTEX_UVS
+        out.uv = vertex.uv;
+    #endif
+    #ifdef VERTEX_TANGENTS
+        out.world_tangent = mesh_tangent_local_to_world(model, vertex.tangent);
+    #endif
+    #ifdef VERTEX_COLORS
+        out.color = vertex.color;
+    #endif
+    #ifdef VERTEX_POSITIONS
+        out.world_position = mesh_position_local_to_world(model, position);
+    #endif
 
     out.clip_position = mesh_position_world_to_clip(out.world_position);
     return out;
@@ -148,9 +171,6 @@ position = twist(position, twist_intensity, body_gradient, mask, offset_seed);
 struct CustomMaterial {
     color: vec4<f32>
 };
-struct FragmentInput {
-    #import bevy_pbr::mesh_vertex_output
-};
 
 @group(1) @binding(2)
 var<uniform> material: CustomMaterial;
@@ -158,7 +178,7 @@ var<uniform> material: CustomMaterial;
 
 @fragment
 fn fragment(
-   in: FragmentInput
+   in: VertexOutput
 ) -> @location(0) vec4<f32> {
     let b = abs(sin(globals.time * speed));
     let color = material.color;
