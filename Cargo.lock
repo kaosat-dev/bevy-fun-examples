@@ -297,6 +297,8 @@ name = "bevy-examples"
 version = "0.2.0"
 dependencies = [
  "bevy",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
