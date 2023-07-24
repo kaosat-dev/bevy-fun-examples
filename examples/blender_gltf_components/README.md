@@ -37,7 +37,13 @@ The workflow goes as follows (once you got your Bevy code setup)
         - for structs with params: use a json representation of your fields (see below) 
 
         ![unit struct components in Blender](./_docs/components_blender.png)
+
+        (the Rust struct for these components for reference is [here](./main.rs#40) )
+
+
         ![complex components in Blender](./_docs/components_blender_parameters.png)
+
+        (the Rust struct for this component for reference is [here](./camera/camera_tracking.rs#14) )
 
 - for collections & their instances: 
     * I usually create a library scene with nested collections

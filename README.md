@@ -24,7 +24,7 @@ Tested with Bevy 0.11.x
     ```cargo run --example vertex_animation```
 
 
-### [Blender Gltf Components](./examples/ blender_gltf_components/README.md)
+### [Blender Gltf Components](./examples/blender_gltf_components/README.md)
 
 - boilerplate code & example to enable using Blender to define Bevy components/levels etc
 
