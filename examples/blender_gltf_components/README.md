@@ -38,10 +38,18 @@ The workflow goes as follows (once you got your Bevy code setup)
 
         ![unit struct components in Blender](./_docs/components_blender.png)
 
+        In rust:
+
+        ![unit struct components in Bevy](./_docs/demo_simple_components.png)
+
         (the Rust struct for these components for reference is [here](./main.rs#40) )
 
 
         ![complex components in Blender](./_docs/components_blender_parameters.png)
+
+        In rust:
+
+        ![complex components in Blender](./_docs/camera_tracking_component.png)
 
         (the Rust struct for this component for reference is [here](./camera/camera_tracking.rs#14) )
 
