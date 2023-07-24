@@ -3,12 +3,17 @@ use std::time::Duration;
 use bevy::{prelude::*, asset::ChangeWatcher, gltf::Gltf};
 use bevy_editor_pls::prelude::*;
 
-mod models;
-use models::*;
+mod process_gltf;
+use process_gltf::*;
 
 mod camera;
 use camera::*;
 
+mod lighting;
+use lighting::*;
+
+mod relationships;
+use relationships::*;
 
 
 #[derive(Component, Reflect, Default, Debug, )]
@@ -16,11 +21,28 @@ use camera::*;
 /// Demo marker component
 pub struct Player;
 
+#[derive(Component, Reflect, Default, Debug, )]
+#[reflect(Component)]
+/// Demo component showing auto injection of components 
+pub struct ShouldBeWithPlayer;
+
+
 
 #[derive(Component, Reflect, Default, Debug, )]
 #[reflect(Component)]
 /// Demo marker component
 pub struct LoadedMarker;
+
+
+#[derive(Component, Reflect, Default, Debug, )]
+#[reflect(Component)]
+/// Demo marker component
+pub struct Interactible;
+
+#[derive(Component, Reflect, Default, Debug, )]
+#[reflect(Component)]
+/// Demo marker component
+pub struct MeshCollider;
 
 
 #[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Hash, States)]
@@ -45,10 +67,19 @@ fn main(){
         ),
         // editor
         EditorPlugin::default(),
-        ModelsPlugin,
+        ProcessGltfPlugin,
+        LightingPlugin,
         CameraPlugin
     ))
+    .register_type::<Interactible>()
+    .register_type::<MeshCollider>()
+
     .register_type::<Player>()
+    // little helper utility, to automatically inject components that are dependant on an other component
+    // ie, here an Entity with a Player component should also always have a ShouldBeWithPlayer component
+    // you get a warning if you use this, as I consider this to be stop-gap solution (usually you should have either a bundle, or directly define all needed components)
+    .add_systems(Update, insert_dependant_component::<Player, ShouldBeWithPlayer>)
+
 
     .add_state::<AppState>()
     .add_systems(Startup, setup)
@@ -97,7 +128,8 @@ fn spawn_level(
                                 scene: preloaded_scene.0.clone(),
                                 ..default()
                             },
-                            LoadedMarker
+                            LoadedMarker,
+                            Name::new("Level1")
                         )
                     );
                     next_state.set(AppState::Running);

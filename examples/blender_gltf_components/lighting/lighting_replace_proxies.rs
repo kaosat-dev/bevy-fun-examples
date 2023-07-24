@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use bevy::pbr::{CascadeShadowConfigBuilder, CascadeShadowConfig};
 
 // fixme might be too specific to might needs, should it be moved out ? also these are all for lights, not models
-pub fn models_replace_proxies(
+pub fn lighting_replace_proxies(
   mut added_dirights: Query<(Entity, &mut DirectionalLight), Added<DirectionalLight>>, 
   mut added_spotlights: Query<&mut SpotLight, Added<SpotLight>>, 
   mut commands: Commands,
