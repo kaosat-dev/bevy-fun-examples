@@ -69,8 +69,6 @@ use super::gltf_extras_to_components;
           else {
             gltf_extras_to_components(gltf, &mut scenes, &*type_registry, "");
           }
-          // asset_server.get_handle_path(gltf_handle).and_then(default)
-
         }
         tracker.loading_gltfs.remove(gltf_handle);
         tracker.loaded_gltfs.insert(gltf_handle.clone());

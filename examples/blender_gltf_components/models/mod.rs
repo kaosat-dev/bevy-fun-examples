@@ -24,7 +24,7 @@ impl Plugin for ModelsPlugin {
         .register_type::<NotShadowCaster>()
         .insert_resource(GltfLoadingTracker::new())
 
-        .add_systems(Update, (
+        .add_systems(PreUpdate, (
           track_new_gltf, 
           process_loaded_scenes,
           models_replace_proxies

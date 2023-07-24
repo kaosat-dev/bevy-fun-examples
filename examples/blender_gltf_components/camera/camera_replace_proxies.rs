@@ -11,7 +11,7 @@ pub fn camera_replace_proxies (
 ) {
 
     for (entity, mut camera) in added_cameras.iter_mut(){
-        info!("added camera");
+        info!("detected added camera, updating proxy");
         camera.hdr = true;
         commands.entity(entity)
           .insert(

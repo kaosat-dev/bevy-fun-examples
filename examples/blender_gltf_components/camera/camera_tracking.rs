@@ -3,6 +3,8 @@ use bevy::prelude::*;
 
 #[derive(Component, Reflect, Debug)]
 #[reflect(Component)]
+/// Component for cameras, with an offset from the Trackable target  
+/// 
 pub struct CameraTracking{
     pub offset: Vec3
 }
@@ -15,11 +17,12 @@ impl Default for CameraTracking {
 
 #[derive(Component, Reflect, Default, Debug, )]
 #[reflect(Component)]
+/// Add this component to an entity if you want it to be tracked by a Camera
 pub struct CameraTrackable;
 
 pub fn camera_track(
     mut tracking_cameras: Query<(&mut Transform, &CameraTracking), (With<Camera>, With<CameraTracking>, Without<CameraTrackable>)>,
-    camera_tracked: Query<(&Transform), With<CameraTrackable>>,
+    camera_tracked: Query<&Transform, With<CameraTrackable>>,
 ) {
     
     for (mut camera_transform, tracking) in tracking_cameras.iter_mut() {

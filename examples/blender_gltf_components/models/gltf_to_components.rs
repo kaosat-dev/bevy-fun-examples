@@ -95,7 +95,7 @@ pub fn gltf_extras_to_components(
         }
         let e_mut = scene.world.entity_mut(entity);
         let archetype = e_mut.archetype().clone();//.components();
-        let all_components = archetype.components();
+        let _all_components = archetype.components();
         // println!("All components {:?}", all_components);
 
         if added_components > 0 {
