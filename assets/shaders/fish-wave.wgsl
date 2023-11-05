@@ -1,4 +1,4 @@
-#import bevy_pbr::mesh_view_bindings
+/*#import bevy_pbr::mesh_view_bindings
 #import bevy_pbr::mesh_bindings
 #import bevy_pbr::mesh_functions
 
@@ -8,10 +8,35 @@
 #import bevy_pbr::mesh_bindings mesh
 #import bevy_pbr::mesh_functions mesh_position_local_to_world
 #import bevy_pbr::mesh_functions mesh_position_world_to_clip
-#import bevy_pbr::mesh_functions mesh_normal_local_to_world
+#import bevy_pbr::mesh_functions mesh_normal_local_to_world*/
+
 // #import bevy_pbr::pbr_functions::prepare_world_normal
+#import bevy_pbr::{
+    // pbr_functions::{alpha_discard as discard, apply_pbr_lighting},
+    mesh_view_bindings,
+    mesh_bindings,
+    mesh_bindings::{mesh},
+    mesh_functions,
+    mesh_functions::{
+        get_model_matrix,
+        mesh_position_local_to_world,
+        mesh_position_world_to_clip,
+        mesh_normal_local_to_world
+    },
+    view_transformations::position_world_to_clip,
+    prepass_bindings,
+    mesh_view_bindings::{globals},
+    mesh_vertex_output,
+    mesh_vertex_output:: {MeshVertexOutput}
+    
+}
+#import bevy_render::instance_index::get_instance_index;
+
+
 
 struct Vertex {
+    @builtin(instance_index) instance_index: u32,
+
     @location(0) position: vec3<f32>,
     @location(1) normal: vec3<f32>,
 #ifdef VERTEX_UVS
@@ -113,7 +138,7 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     let time = globals.time;
 
     // randomize movement based on world coordinates 
-    let world_pos = mesh_position_local_to_world(mesh.model, vec4<f32>(vertex.position.x, vertex.position.y, vertex.position.z, 1.0));
+    let world_pos = mesh_position_local_to_world(get_model_matrix(vertex.instance_index), vec4<f32>(vertex.position.x, vertex.position.y, vertex.position.z, 1.0));
     let offset_seed = (world_pos.x * world_pos.y * world_pos.z) / 100. ;
 
     // body gradient
@@ -148,8 +173,9 @@ fn vertex(vertex: Vertex) -> VertexOutput {
         var model = skin_model(vertex.joint_indices, vertex.joint_weights);
         out.world_normal = skin_normals(model, vertex.normal);
     #else
-        var model = mesh.model;
-        out.world_normal = mesh_normal_local_to_world(vertex.normal);
+        var model = get_model_matrix(vertex.instance_index);
+        out.world_normal = mesh_normal_local_to_world(vertex.normal, vertex.instance_index);
+
     #endif
     #ifdef VERTEX_UVS
         out.uv = vertex.uv;
@@ -164,7 +190,7 @@ fn vertex(vertex: Vertex) -> VertexOutput {
         out.world_position = mesh_position_local_to_world(model, position);
     #endif
 
-    out.clip_position = mesh_position_world_to_clip(out.world_position);
+    out.clip_position = position_world_to_clip(out.world_position.xyz);
     return out;
 }
 

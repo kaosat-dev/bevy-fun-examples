@@ -21,20 +21,15 @@ Tested with Bevy 0.11.x
 
     run it with 
     
-    ```cargo run --example vertex_animation```
+    ```cargo run --features bevy/dynamic_linking --features bevy/file_watcher --example vertex_animation```
 
 
-### [Blender Gltf Components](./examples/blender_gltf_components/README.md)
+### [Blender Gltf Components](https://github.com/kaosat-dev/Blender_bevy_components_workflow)
 
-- boilerplate code & example to enable using Blender to define Bevy components/levels etc
-
+- this is now a full fledged workflow with Crates for Bevy , Blender addon etc, see the link above
 
     ![demo](./examples/blender_gltf_components/_docs/blender_gltf_components.png)
 
-
-    run it with 
-    
-    ```cargo run --features bevy/dynamic_linking --example blender_gltf_components```
 
 
 

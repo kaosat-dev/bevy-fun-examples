@@ -1,7 +1,5 @@
 
 
-use std::time::Duration;
-
 use bevy::{
     prelude::*, 
 
@@ -11,13 +9,12 @@ use bevy::{
         render_resource::{
             AsBindGroup, ShaderRef,
         },
-    }, asset::ChangeWatcher
+    }
 };
 
 
 // This is the struct that will be passed to your shader
-#[derive(AsBindGroup, Clone, TypeUuid, TypePath)]
-#[uuid = "4ee9c363-1124-4113-890e-199d81b00281"]
+#[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
 pub struct CustomMaterial {
     #[uniform(2)]
     color: Color,
@@ -274,10 +271,6 @@ fn main(){
     .add_plugins((
         DefaultPlugins.set(
             AssetPlugin {
-                // This tells the AssetServer to watch for changes to assets.
-                // It enables our scenes to automatically reload in game when we modify their files.
-                // practical in our case to be able to edit the shaders without needing to recompile
-                watch_for_changes: ChangeWatcher::with_delay(Duration::from_millis(50)),
                 ..default()
             }
         ),
