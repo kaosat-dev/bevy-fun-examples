@@ -9,7 +9,7 @@ use bevy::{
         render_resource::{
             AsBindGroup, ShaderRef,
         },
-    }
+    }, math::Vec3A, utils::{HashMap, hashbrown::hash_map::Entry}
 };
 
 
@@ -64,18 +64,86 @@ impl Default for CustomMaterial {
 
 
 pub fn update_uniforms (
-    aabbs: Query<(&Aabb, &mut Handle<CustomMaterial>), With<GlobalTransform>>,
+    with_custom_materials: Query<(&Aabb, &mut Handle<CustomMaterial>), With<GlobalTransform>>,
     mut custom_materials: ResMut<Assets<CustomMaterial>>,
-    
-) {
-    for (aabb, handle) in aabbs.iter() {
-        let min = Vec3::from(aabb.min());
-        let max = Vec3::from(aabb.max());
 
-        let material = custom_materials.get_mut(handle).expect("custom material should have been found");
-        material.min_bounds = min;
-        material.max_bounds = max;
+    root_entities: Query<(Entity), (With<RootEntity>, Without<Aabb>)>,
+    children: Query<&Children>,
+    parents: Query<&Parent>,
+    with_aabbs: Query<(Entity, &Aabb)>,
+    mut commands: Commands,
+) {
+    // compute compound aabb
+   
+    let mut entity_to_children_aabbs: HashMap<Entity, Vec<Aabb>> = HashMap::new();
+
+    for root_entity in root_entities.iter() {
+        println!("entity {:?}", root_entity);
+        for descendant in children.iter_descendants(root_entity) {
+
+            let parent = parents.get(descendant).expect("we should have a parent available").get();
+            println!("child {:?}, parent: {:?}", descendant, parent);
+            if let Ok((_, aabb)) = with_aabbs.get(descendant) {
+                println!("this one has aabb");
+                match entity_to_children_aabbs.entry(parent) {
+                    Entry::Vacant(e) => {
+                        e.insert(vec![aabb.clone()]);
+                    }
+                    Entry::Occupied(mut e) => {
+                        e.get_mut().push(aabb.clone());
+                    }
+                } 
+            }
+        }
+
+        // now build the parent's compound aabb
+        // let mut root_aabb:Option<Aabb>;
+        for (entity, children_aabbs) in &entity_to_children_aabbs {
+            println!("adding aabb to {:?}: {:?}", entity, children_aabbs.len());
+            // aabb computation
+            let mut min = Vec3A::splat(f32::MAX);
+            let mut max = Vec3A::splat(f32::MIN);
+            for aabb in children_aabbs.iter(){
+                min = min.min(aabb.min());
+                max = max.max(aabb.max());
+            }
+        
+            // let size = (max - min).length();
+            let compound_aabb = Aabb::from_min_max(Vec3::from(min), Vec3::from(max));
+            commands.entity(*entity).insert(compound_aabb);
+
+            if entity.index() == root_entity.index() {
+                let root_aabb = compound_aabb.clone();
+
+                // then we assign the root aabb to all children with the custom material
+                for (_, handle) in with_custom_materials.iter() {
+                    let min = Vec3::from(root_aabb.min());
+                    let max = Vec3::from(root_aabb.max());
+            
+                    let material = custom_materials.get_mut(handle).expect("custom material should have been found");
+                    material.min_bounds = min;
+                    material.max_bounds = max;
+                }
+
+            }
+        }
+
+        // then we assign the root aabb to all children with the custom material
+        /*if let Some(root_aabb) = root_aabb{
+            //  && entity_to_children_aabbs.contains_key(&root_entity) 
+            for (aabb, handle) in with_custom_materials.iter() {
+                let min = Vec3::from(root_aabb.min());
+                let max = Vec3::from(root_aabb.max());
+        
+                let material = custom_materials.get_mut(handle).expect("custom material should have been found");
+                material.min_bounds = min;
+                material.max_bounds = max;
+            }
+        }*/
+        
     }
+
+
 }
 
 
@@ -83,6 +151,9 @@ pub fn update_uniforms (
 
 #[derive(Component)]
 pub struct Inserted;
+
+#[derive(Component)]
+pub struct RootEntity;
 
 pub fn replace_standard_material( 
     gltf_entities: Query<
@@ -124,10 +195,10 @@ pub fn setup (
         ..default()
     });
 
-    commands.spawn(SceneBundle {
+    commands.spawn((SceneBundle {
         scene: asset_server.load("models/fish1.glb#Scene0"),
         ..default()
-    });
+    }, RootEntity));
 
     commands.insert_resource(AmbientLight {
         color: Color::WHITE,
