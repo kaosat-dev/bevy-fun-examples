@@ -71,6 +71,7 @@ pub fn update_aabbs (
     children: Query<&Children>,
     parents: Query<&Parent>,
     with_aabbs: Query<&Aabb>,
+    
     mut commands: Commands,
 ) {
     // compute compound aabb
@@ -79,10 +80,8 @@ pub fn update_aabbs (
 
     let mut processed_entities = 0;
     for root_entity in root_entities.iter() {
-        println!("PROCESSING root entity {:?}", root_entity);
         
         loop  {
-            println!("       in loop");
             for child in children.iter_descendants(root_entity) {
                 let parent = parents.get(child).expect("we should have a parent available").get();
                 let children_to_process = children.get(parent).unwrap();
@@ -138,7 +137,6 @@ pub fn update_aabbs (
 
         // now build the parent's compound aabb
         for (entity, aabb) in &compound_aabbs {
-            println!("adding aabb to {:?}", entity);           
             commands.entity(*entity).insert(*aabb);
 
             if entity.index() == root_entity.index() {
