@@ -1,7 +1,5 @@
 
 
-use std::time::Duration;
-
 use bevy::{
     prelude::*, 
 
@@ -11,13 +9,12 @@ use bevy::{
         render_resource::{
             AsBindGroup, ShaderRef,
         },
-    }, asset::ChangeWatcher
+    }, math::Vec3A, utils::{HashMap, hashbrown::hash_map::Entry}
 };
 
 
 // This is the struct that will be passed to your shader
-#[derive(AsBindGroup, Clone, TypeUuid, TypePath)]
-#[uuid = "4ee9c363-1124-4113-890e-199d81b00281"]
+#[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
 pub struct CustomMaterial {
     #[uniform(2)]
     color: Color,
@@ -66,18 +63,96 @@ impl Default for CustomMaterial {
 }
 
 
-pub fn update_uniforms (
-    aabbs: Query<(&Aabb, &mut Handle<CustomMaterial>), With<GlobalTransform>>,
+pub fn update_aabbs (
+    with_custom_materials: Query<(&Aabb, &mut Handle<CustomMaterial>), With<GlobalTransform>>,
     mut custom_materials: ResMut<Assets<CustomMaterial>>,
-    
-) {
-    for (aabb, handle) in aabbs.iter() {
-        let min = Vec3::from(aabb.min());
-        let max = Vec3::from(aabb.max());
 
-        let material = custom_materials.get_mut(handle).expect("custom material should have been found");
-        material.min_bounds = min;
-        material.max_bounds = max;
+    root_entities: Query<Entity, (With<RootEntity>, Without<Aabb>)>,
+    children: Query<&Children>,
+    parents: Query<&Parent>,
+    with_aabbs: Query<&Aabb>,
+    
+    mut commands: Commands,
+) {
+    // compute compound aabb
+    let mut entity_to_children_aabbs: HashMap<Entity, Vec<Aabb>> = HashMap::new();
+    let mut compound_aabbs: HashMap<Entity, Aabb> = HashMap::new();
+
+    let mut processed_entities = 0;
+    for root_entity in root_entities.iter() {
+        
+        loop  {
+            for child in children.iter_descendants(root_entity) {
+                let parent = parents.get(child).expect("we should have a parent available").get();
+                let children_to_process = children.get(parent).unwrap();
+
+                let aabb:Option<Aabb>;
+                if compound_aabbs.contains_key(&child){
+                    aabb = Some(*compound_aabbs.get(&child).unwrap());
+                } else {
+                    if let Ok(_aabb) = with_aabbs.get(child){
+                        aabb = Some(*_aabb);
+                    }else {
+                        aabb = None;
+                    }
+                }
+                // process those entities that already have aabbs
+                if let Some(aabb) = aabb {
+                    if ! entity_to_children_aabbs.contains_key(&parent) || !entity_to_children_aabbs.get(&parent).unwrap().contains(&aabb) {
+                        processed_entities += 1;
+                        match entity_to_children_aabbs.entry(parent) {
+                            Entry::Vacant(e) => {
+                                e.insert(vec![aabb.clone()]);
+                            }
+                            Entry::Occupied(mut e) => {
+                                e.get_mut().push(aabb.clone());
+                            }
+                        } 
+                    }
+                    compound_aabbs.insert(child, aabb.clone());
+                   
+                    // if all children of the parent have been processed, compute the parent's aabb
+                    if let Some(aabbs) = entity_to_children_aabbs.get(&parent) {
+                        if aabbs.len() == children_to_process.len() {
+
+                            let mut min = Vec3A::splat(f32::MAX);
+                            let mut max = Vec3A::splat(f32::MIN);
+                            for aabb in aabbs.iter(){
+                                min = min.min(aabb.min());
+                                max = max.max(aabb.max());
+                            }
+                            let compound_aabb = Aabb::from_min_max(Vec3::from(min), Vec3::from(max));
+                            compound_aabbs.insert(parent, compound_aabb);
+                        }
+                    }
+                }
+            }
+            
+            // if the root node has been processed or NO entities have been processed (ie , even the leaves did not have aabbs)
+            if entity_to_children_aabbs.contains_key(&root_entity) || processed_entities == 0 {
+                break;
+            }
+        }
+       
+
+        // now build the parent's compound aabb
+        for (entity, aabb) in &compound_aabbs {
+            commands.entity(*entity).insert(*aabb);
+
+            if entity.index() == root_entity.index() {
+                let root_aabb = aabb.clone();
+                // then we assign the root aabb to all children with the custom material
+                for (_, handle) in with_custom_materials.iter() {
+                    let min = Vec3::from(root_aabb.min());
+                    let max = Vec3::from(root_aabb.max());
+
+                    let material = custom_materials.get_mut(handle).expect("custom material should have been found");
+                    material.min_bounds = min;
+                    material.max_bounds = max;
+                }
+
+            }
+        }
     }
 }
 
@@ -86,6 +161,9 @@ pub fn update_uniforms (
 
 #[derive(Component)]
 pub struct Inserted;
+
+#[derive(Component)]
+pub struct RootEntity;
 
 pub fn replace_standard_material( 
     gltf_entities: Query<
@@ -127,10 +205,10 @@ pub fn setup (
         ..default()
     });
 
-    commands.spawn(SceneBundle {
+    commands.spawn((SceneBundle {
         scene: asset_server.load("models/fish1.glb#Scene0"),
         ..default()
-    });
+    }, RootEntity));
 
     commands.insert_resource(AmbientLight {
         color: Color::WHITE,
@@ -261,7 +339,7 @@ impl Plugin for VertexAnimationPlugin {
       .add_systems(Startup, setup)
       .add_systems(Update, (
         replace_standard_material,
-        update_uniforms,
+        update_aabbs,
         update_shader_uniforms
       ))
       ;
@@ -274,10 +352,6 @@ fn main(){
     .add_plugins((
         DefaultPlugins.set(
             AssetPlugin {
-                // This tells the AssetServer to watch for changes to assets.
-                // It enables our scenes to automatically reload in game when we modify their files.
-                // practical in our case to be able to edit the shaders without needing to recompile
-                watch_for_changes: ChangeWatcher::with_delay(Duration::from_millis(50)),
                 ..default()
             }
         ),
